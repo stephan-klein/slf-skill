@@ -11,30 +11,15 @@ const ANSWER_COUNT = 4;
 const GAME_LENGTH = 5;
 const players = ["Moni", "Stephan"];
 
-var letter;
-
-function getRandomLetter(category){
-  let letterArr = null;
-  
-  while (letterArr == null) {
-    let letter = String.fromCharCode(
-      Math.floor(Math.random() * 26) + 97
-    );
-  
-    let letterArr = category.DE_DE[letter];
-    console.log("letterArr for letter:"+letter+" = "+letterArr);
-  }
-  
-  return letter.toUpperCase();
-}
+let letter;
 
 function startGame(newGame, handlerInput) {
   const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
   letter = getRandomLetter(countries);
-  
+
   let speechOutput = newGame
     ? requestAttributes.t('NEW_GAME_MESSAGE', requestAttributes.t('GAME_NAME'))
-      + requestAttributes.t('WELCOME_MESSAGE', letter, players[0])
+    + requestAttributes.t('WELCOME_MESSAGE', letter, players[0])
     : '';
 
   const sessionAttributes = {};
@@ -55,46 +40,16 @@ function startGame(newGame, handlerInput) {
     .getResponse();
 }
 
-function isAnswerSlotValid(intent, letter) {
-  console.log('start validating');
-  const answerSlotFilled = intent
-    && intent.slots
-    && intent.slots.Answer
-    && intent.slots.Answer.value;
-    
-  if (!answerSlotFilled)
-    return false;
-    
-  let answer = intent.slots.Answer.value;
-    
-  console.log('validating' + answer + ', ' + answer.charAt(0));
-     
-  console.log(letter);
-  let letterArr = countries.DE_DE[letter];
-  console.log(letterArr);
-  let normAnswer = answer.charAt(0).toUpperCase() + answer.substring(1).toLowerCase();
-  
-  console.log(normAnswer);
-  
-  let validResult = letterArr.includes(normAnswer);
-  
-  return answerSlotFilled
-    && intent.slots.Answer.value.charAt(0).toUpperCase() === letter
-    && validResult;
-}
-
 function handleUserGuess(userGaveUp, handlerInput) {
-  const { requestEnvelope, attributesManager, responseBuilder } = handlerInput;
-  const { intent } = requestEnvelope.request;
+  const {requestEnvelope, attributesManager, responseBuilder} = handlerInput;
+  const {intent} = requestEnvelope.request;
 
   const answerSlotValid = isAnswerSlotValid(intent, letter);
 
-  let speechOutput = '';
   let speechOutputAnalysis = '';
 
   const sessionAttributes = attributesManager.getSessionAttributes();
   let currentScore = parseInt(sessionAttributes.score, 10);
-  const { correctAnswerText } = sessionAttributes;
   const requestAttributes = attributesManager.getRequestAttributes();
 
   if (answerSlotValid) {
@@ -106,12 +61,12 @@ function handleUserGuess(userGaveUp, handlerInput) {
     }
   }
 
-  speechOutput = speechOutputAnalysis
+  speechOutput = speechOutputAnalysis;
   speechOutput += requestAttributes.t(
     'NEXT_PLAYER'
   );
-    
-  let repromptText = speechOutput
+
+  let repromptText = speechOutput;
 
   Object.assign(sessionAttributes, {
     speechOutput: repromptText,
@@ -125,6 +80,52 @@ function handleUserGuess(userGaveUp, handlerInput) {
     .getResponse();
 }
 
+function getRandomLetter(category) {
+  let letterArr = null;
+  let i, l;
+
+  for (i = 0; i < 20 && letterArr == null; i++) {
+    l = String.fromCharCode(
+      Math.floor(Math.random() * 26) + 97
+    ).toUpperCase();
+
+    let letterArr = category.DE_DE[l];
+    console.log("letterArr for letter:" + l + " = " + letterArr);
+  }
+
+  if (i === 20)
+    console.log("Error: 20 times no data found in array");
+
+  return letterArr != null ? l : null;
+}
+
+function isAnswerSlotValid(intent, letter) {
+  console.log('start validating');
+  const answerSlotFilled = intent
+    && intent.slots
+    && intent.slots.Answer
+    && intent.slots.Answer.value;
+
+  if (!answerSlotFilled)
+    return false;
+
+  let answer = intent.slots.Answer.value;
+
+  console.log('validating' + answer + ', ' + answer.charAt(0));
+
+  console.log(letter);
+  let letterArr = countries.DE_DE[letter];
+  console.log(letterArr);
+  let normAnswer = answer.charAt(0).toUpperCase() + answer.substring(1).toLowerCase();
+
+  console.log(normAnswer);
+
+  let validResult = letterArr.includes(normAnswer);
+
+  return answerSlotFilled
+    && intent.slots.Answer.value.charAt(0).toUpperCase() === letter
+    && validResult;
+}
 
 function helpTheUser(newGame, handlerInput) {
   const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
@@ -223,7 +224,7 @@ const LocalizationInterceptor = {
 
 const LaunchRequest = {
   canHandle(handlerInput) {
-    const { request } = handlerInput.requestEnvelope;
+    const {request} = handlerInput.requestEnvelope;
 
     return request.type === 'LaunchRequest'
       || (request.type === 'IntentRequest'
@@ -237,7 +238,7 @@ const LaunchRequest = {
 
 const HelpIntent = {
   canHandle(handlerInput) {
-    const { request } = handlerInput.requestEnvelope;
+    const {request} = handlerInput.requestEnvelope;
 
     return request.type === 'IntentRequest' && request.intent.name === 'AMAZON.HelpIntent';
   },
@@ -288,7 +289,7 @@ const SessionEndedRequest = {
 const AnswerIntent = {
   canHandle(handlerInput) {
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-        && (handlerInput.requestEnvelope.request.intent.name === 'AnswerIntent'
+      && (handlerInput.requestEnvelope.request.intent.name === 'AnswerIntent'
         || handlerInput.requestEnvelope.request.intent.name === 'DontKnowIntent');
   },
   handle(handlerInput) {
@@ -302,7 +303,7 @@ const AnswerIntent = {
 const RepeatIntent = {
   canHandle(handlerInput) {
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-        && handlerInput.requestEnvelope.request.intent.name === 'AMAZON.RepeatIntent';
+      && handlerInput.requestEnvelope.request.intent.name === 'AMAZON.RepeatIntent';
   },
   handle(handlerInput) {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
@@ -315,7 +316,7 @@ const RepeatIntent = {
 const YesIntent = {
   canHandle(handlerInput) {
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-        && handlerInput.requestEnvelope.request.intent.name === 'AMAZON.YesIntent';
+      && handlerInput.requestEnvelope.request.intent.name === 'AMAZON.YesIntent';
   },
   handle(handlerInput) {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
@@ -332,7 +333,7 @@ const YesIntent = {
 const StopIntent = {
   canHandle(handlerInput) {
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-        && handlerInput.requestEnvelope.request.intent.name === 'AMAZON.StopIntent';
+      && handlerInput.requestEnvelope.request.intent.name === 'AMAZON.StopIntent';
   },
   handle(handlerInput) {
     const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
