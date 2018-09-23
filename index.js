@@ -11,11 +11,9 @@ const ANSWER_COUNT = 4;
 const GAME_LENGTH = 5;
 const players = ["Moni", "Stephan"];
 
-let letter;
-
 function startGame(newGame, handlerInput) {
   const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
-  letter = getRandomLetter(countries);
+  let letter = getRandomLetter(countries);
 
   let speechOutput = newGame
     ? requestAttributes.t('NEW_GAME_MESSAGE', requestAttributes.t('GAME_NAME'))
@@ -28,6 +26,7 @@ function startGame(newGame, handlerInput) {
   Object.assign(sessionAttributes, {
     speechOutput: repromptText,
     repromptText,
+    currentLetter: letter,
     score: 0
   });
 
@@ -43,16 +42,15 @@ function startGame(newGame, handlerInput) {
 function handleUserGuess(userGaveUp, handlerInput) {
   const {requestEnvelope, attributesManager, responseBuilder} = handlerInput;
   const {intent} = requestEnvelope.request;
-
-  const answerSlotValid = isAnswerSlotValid(intent, letter);
+  const sessionAttributes = attributesManager.getSessionAttributes();
+  const requestAttributes = attributesManager.getRequestAttributes();
 
   let speechOutputAnalysis = '';
 
-  const sessionAttributes = attributesManager.getSessionAttributes();
   let currentScore = parseInt(sessionAttributes.score, 10);
-  const requestAttributes = attributesManager.getRequestAttributes();
+  let letter = sessionAttributes.currentLetter;
 
-  if (answerSlotValid) {
+  if (isAnswerSlotValid(intent, letter)) {
     currentScore += 1;
     speechOutputAnalysis = requestAttributes.t('ANSWER_CORRECT_MESSAGE');
   } else {
@@ -195,6 +193,7 @@ const languageString = {
       NEW_GAME_MESSAGE: 'Willkommen bei %s. ',
       WELCOME_MESSAGE: 'Nenne Länder mit dem Anfangsbuchstaben %s. %s beginnt.',
       ANSWER_WRONG_MESSAGE: 'Falsch. ',
+      ANSWER_CORRECT_MESSAGE: 'Richtig. ',
       CORRECT_ANSWER_MESSAGE: 'Die richtige Antwort ist %s: %s. ',
       ANSWER_IS_MESSAGE: 'Diese Antwort ist ',
       TELL_QUESTION_MESSAGE: 'Frage %s. %s ',
