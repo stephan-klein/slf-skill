@@ -89,7 +89,7 @@ function getRandomLetter(category) {
       Math.floor(Math.random() * 26) + 97
     ).toUpperCase();
 
-    let letterArr = category.DE_DE[l];
+    letterArr = category.DE_DE[l];
     console.log("letterArr for letter:" + l + " = " + letterArr);
   }
 
