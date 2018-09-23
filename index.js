@@ -2,7 +2,6 @@
 /* eslint-disable  no-console */
 
 const Alexa = require('ask-sdk-core');
-const questions = require('./questions');
 const countries = require('./countries');
 const i18n = require('i18next');
 const sprintf = require('i18next-sprintf-postprocessor');
@@ -26,7 +25,8 @@ function startGame(newGame, handlerInput) {
   Object.assign(sessionAttributes, {
     speechOutput: repromptText,
     repromptText,
-    currentLetter: letter,
+    letter: letter,
+    player: 0,
     score: 0
   });
 
@@ -48,7 +48,13 @@ function handleUserGuess(userGaveUp, handlerInput) {
   let speechOutputAnalysis = '';
 
   let currentScore = parseInt(sessionAttributes.score, 10);
-  let letter = sessionAttributes.currentLetter;
+  let nextPlayer = parseInt(sessionAttributes.player, 10) + 1;
+
+  //Reset player index if at last player
+  if (nextPlayer === players.length)
+    nextPlayer = 0;
+
+  let letter = sessionAttributes.letter;
 
   if (isAnswerSlotValid(intent, letter)) {
     currentScore += 1;
@@ -60,15 +66,16 @@ function handleUserGuess(userGaveUp, handlerInput) {
   }
 
   speechOutput = speechOutputAnalysis;
-  speechOutput += requestAttributes.t(
-    'NEXT_PLAYER'
-  );
+  //speechOutput += requestAttributes.t('NEXT_PLAYER');
+  speechOutput += players[nextPlayer] + ".";
 
-  let repromptText = speechOutput;
+  let repromptText = players[nextPlayer] + ".";
 
   Object.assign(sessionAttributes, {
-    speechOutput: repromptText,
+    speechOutput: speechOutput,
     repromptText,
+    letter: letter,
+    player: nextPlayer,
     score: currentScore
   });
 
@@ -98,7 +105,6 @@ function getRandomLetter(category) {
 }
 
 function isAnswerSlotValid(intent, letter) {
-  console.log('start validating');
   const answerSlotFilled = intent
     && intent.slots
     && intent.slots.Answer
@@ -109,20 +115,14 @@ function isAnswerSlotValid(intent, letter) {
 
   let answer = intent.slots.Answer.value;
 
-  console.log('validating' + answer + ', ' + answer.charAt(0));
-
-  console.log(letter);
+  console.log('Validating' + answer + ', ' + answer.charAt(0) + ' for letter ' + letter);
   let letterArr = countries.DE_DE[letter];
-  console.log(letterArr);
+  console.log('List of valid answers: ' + letterArr);
+
+  //Normalizing the answer
   let normAnswer = answer.charAt(0).toUpperCase() + answer.substring(1).toLowerCase();
 
-  console.log(normAnswer);
-
-  let validResult = letterArr.includes(normAnswer);
-
-  return answerSlotFilled
-    && intent.slots.Answer.value.charAt(0).toUpperCase() === letter
-    && validResult;
+  return letterArr.includes(normAnswer);
 }
 
 function helpTheUser(newGame, handlerInput) {
@@ -140,7 +140,6 @@ function helpTheUser(newGame, handlerInput) {
 const languageString = {
   en: {
     translation: {
-      QUESTIONS: questions.QUESTIONS_EN_US,
       GAME_NAME: 'Reindeer Trivia',
       HELP_MESSAGE: 'I will ask you %s multiple choice questions. Respond with the number of the answer. For example, say one, two, three, or four. To start a new game at any time, say, start game. ',
       REPEAT_QUESTION_MESSAGE: 'To repeat the last question, say, repeat. ',
@@ -166,19 +165,16 @@ const languageString = {
   },
   'en-US': {
     translation: {
-      QUESTIONS: questions.QUESTIONS_EN_US,
       GAME_NAME: 'American Reindeer Trivia'
     },
   },
   'en-GB': {
     translation: {
-      QUESTIONS: questions.QUESTIONS_EN_GB,
       GAME_NAME: 'British Reindeer Trivia'
     },
   },
   de: {
     translation: {
-      QUESTIONS: questions.QUESTIONS_DE_DE,
       GAME_NAME: 'Moni versus Stephan',
       HELP_MESSAGE: 'Ich stelle dir %s Multiple-Choice-Fragen. Antworte mit der Zahl, die zur richtigen Antwort gehört. Sage beispielsweise eins, zwei, drei oder vier. Du kannst jederzeit ein neues Spiel beginnen, sage einfach „Spiel starten“. ',
       REPEAT_QUESTION_MESSAGE: 'Wenn die letzte Frage wiederholt werden soll, sage „Wiederholen“ ',
@@ -244,7 +240,7 @@ const HelpIntent = {
   handle(handlerInput) {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
 
-    const newGame = !(sessionAttributes.questions);
+    const newGame = !(sessionAttributes.letter);
     return helpTheUser(newGame, handlerInput);
   },
 };
@@ -262,7 +258,7 @@ const UnhandledIntent = {
         .speak(speechOutput)
         .reprompt(speechOutput)
         .getResponse();
-    } else if (sessionAttributes.questions) {
+    } else if (sessionAttributes.letter) {
       const speechOutput = requestAttributes.t('TRIVIA_UNHANDLED', ANSWER_COUNT.toString());
       return handlerInput.attributesManager
         .speak(speechOutput)
@@ -319,7 +315,7 @@ const YesIntent = {
   },
   handle(handlerInput) {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-    if (sessionAttributes.questions) {
+    if (sessionAttributes.letter) {
       return handlerInput.responseBuilder.speak(sessionAttributes.speechOutput)
         .reprompt(sessionAttributes.repromptText)
         .getResponse();

@@ -42,7 +42,7 @@ module.exports = {
   "T":["Tadschikistan","Taiwan","Tansania","Thailand","Togo","Tokelau","Tonga","Trinidad und Tobago","Tristan da Cunha","Tschad",
   "Tschechien","Tunesien","T\u00fcrkei","Turkmenistan","Turks- und Caicosinseln","Tuvalu"],
   "U":["Uganda","Ukraine","Ungarn","Uruguay","Usbekistan"],
-  "V":["Vanuatu","Vatikanstadt","Venezuela","Vereinigte Arabische Emirate","Vereinigte Staaten","Vereinigtes K\u00f6nigreich","Vereinte Nationen","Vietnam"],
+  "V":["Vanuatu","Vatikan","Vatikanstadt","Venezuela","Vereinigte Arabische Emirate","Vereinigte Staaten","Vereinigtes K\u00f6nigreich","Vereinte Nationen","Vietnam"],
   "W":["Wallis und Futuna","Weihnachtsinsel","Westsahara"],
   "Z":["Zentralafrikanische Republik","Zypern"]}
 
