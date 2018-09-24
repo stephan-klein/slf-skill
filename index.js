@@ -27,7 +27,8 @@ function startGame(newGame, handlerInput) {
     repromptText,
     letter: letter,
     player: 0,
-    score: 0
+    score: 0,
+    givenAnswers: []
   });
 
   handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
@@ -49,6 +50,7 @@ function handleUserGuess(userGaveUp, handlerInput) {
 
   let currentScore = parseInt(sessionAttributes.score, 10);
   let nextPlayer = parseInt(sessionAttributes.player, 10) + 1;
+  let correctAnswers = sessionAttributes.givenAnswers;
 
   //Reset player index if at last player
   if (nextPlayer === players.length)
@@ -56,9 +58,14 @@ function handleUserGuess(userGaveUp, handlerInput) {
 
   let letter = sessionAttributes.letter;
 
-  if (isAnswerSlotValid(intent, letter)) {
-    currentScore += 1;
-    speechOutputAnalysis = requestAttributes.t('ANSWER_CORRECT_MESSAGE');
+  let normAnswer = isAnswerSlotValid(intent, letter);
+  if (normAnswer != null) {
+    if (!answerAlreadyGiven(normAnswer, correctAnswers)){
+      currentScore += 1;
+      speechOutputAnalysis = requestAttributes.t('ANSWER_CORRECT_MESSAGE');
+    } else {
+      speechOutputAnalysis = requestAttributes.t('ANSWER_ALREADY_GIVEN_MESSAGE');
+    }
   } else {
     if (!userGaveUp) {
       speechOutputAnalysis = requestAttributes.t('ANSWER_WRONG_MESSAGE');
@@ -76,7 +83,8 @@ function handleUserGuess(userGaveUp, handlerInput) {
     repromptText,
     letter: letter,
     player: nextPlayer,
-    score: currentScore
+    score: currentScore,
+    givenAnswers: correctAnswers
   });
 
   return responseBuilder.speak(speechOutput)
@@ -122,7 +130,21 @@ function isAnswerSlotValid(intent, letter) {
   //Normalizing the answer
   let normAnswer = answer.charAt(0).toUpperCase() + answer.substring(1).toLowerCase();
 
-  return letterArr.includes(normAnswer);
+  if (letterArr.includes(normAnswer)){
+    return normAnswer;
+  } else {
+    return null;
+  }
+}
+
+function answerAlreadyGiven(normAnswer,givenAnswers){
+  if (givenAnswers.includes(normAnswer)){
+    console.log('Answer already given');
+    return true;
+  } else {
+    givenAnswers.push(normAnswer);
+    return false;
+  }
 }
 
 function helpTheUser(newGame, handlerInput) {
@@ -155,6 +177,7 @@ const languageString = {
       WELCOME_MESSAGE: 'I will ask you %s questions, try to get as many right as you can. Just say the number of the answer. Let\'s begin. ',
       ANSWER_CORRECT_MESSAGE: 'correct. ',
       ANSWER_WRONG_MESSAGE: 'wrong. ',
+      ANSWER_ALREADY_GIVEN_MESSAGE: 'fuck you. ',
       CORRECT_ANSWER_MESSAGE: 'The correct answer is %s: %s. ',
       ANSWER_IS_MESSAGE: 'That answer is ',
       TELL_QUESTION_MESSAGE: 'Question %s. %s ',
@@ -190,6 +213,7 @@ const languageString = {
       WELCOME_MESSAGE: 'Nenne Länder mit dem Anfangsbuchstaben %s. %s beginnt.',
       ANSWER_WRONG_MESSAGE: 'Falsch. ',
       ANSWER_CORRECT_MESSAGE: 'Richtig. ',
+      ANSWER_ALREADY_GIVEN_MESSAGE: 'Fick Dich. ',
       CORRECT_ANSWER_MESSAGE: 'Die richtige Antwort ist %s: %s. ',
       ANSWER_IS_MESSAGE: 'Diese Antwort ist ',
       TELL_QUESTION_MESSAGE: 'Frage %s. %s ',

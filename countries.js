@@ -43,7 +43,7 @@ module.exports = {
   "Tschechien","Tunesien","T\u00fcrkei","Turkmenistan","Turks- und Caicosinseln","Tuvalu"],
   "U":["Uganda","Ukraine","Ungarn","Uruguay","Usbekistan"],
   "V":["Vanuatu","Vatikan","Vatikanstadt","Venezuela","Vereinigte Arabische Emirate","Vereinigte Staaten","Vereinigtes K\u00f6nigreich","Vereinte Nationen","Vietnam"],
-  "W":["Wallis und Futuna","Weihnachtsinsel","Westsahara"],
+  "W":["Wales","Wallis und Futuna","Weihnachtsinsel","Westsahara"],
   "Z":["Zentralafrikanische Republik","Zypern"]}
 
 };
