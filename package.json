@@ -14,6 +14,7 @@
   "author": "Amazon.com",
   "license": "SEE LICENSE IN LICENSE.TXT",
   "dependencies": {
+    "make-runnable": "1.3.6",
     "ask-sdk": "^2.0.0",
     "i18next": "^10.6.0",
     "i18next-sprintf-postprocessor": "^0.2.2"
