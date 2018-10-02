@@ -16,7 +16,7 @@ function startGame(newGame, handlerInput) {
 
   let speechOutput = newGame
     ? requestAttributes.t('NEW_GAME_MESSAGE', requestAttributes.t('GAME_NAME'))
-    + requestAttributes.t('WELCOME_MESSAGE', letter, players[0])
+    + requestAttributes.t('WELCOME_MESSAGE', "\""+ letter + "\"", players[0])
     : '';
 
   const sessionAttributes = {};
@@ -33,14 +33,16 @@ function startGame(newGame, handlerInput) {
 
   handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
 
-  return handlerInput.responseBuilder
+  return result =  handlerInput.responseBuilder
     .speak(speechOutput)
     .reprompt(repromptText)
     .withSimpleCard(requestAttributes.t('GAME_NAME'), repromptText)
+     //.addElicitSlotDirective('CountryAnswer') This does not work - needed ?
     .getResponse();
 }
 
 function handleUserGuess(userGaveUp, handlerInput) {
+  console.log("handleUserGuess started");
   const {requestEnvelope, attributesManager, responseBuilder} = handlerInput;
   const {intent} = requestEnvelope.request;
   const sessionAttributes = attributesManager.getSessionAttributes();
@@ -52,13 +54,16 @@ function handleUserGuess(userGaveUp, handlerInput) {
   let nextPlayer = parseInt(sessionAttributes.player, 10) + 1;
   let correctAnswers = sessionAttributes.givenAnswers;
 
+  if (intent != null){
+    console.log("Current Intent Slots are: " + JSON.stringify(intent));
+  }
   //Reset player index if at last player
   if (nextPlayer === players.length)
     nextPlayer = 0;
 
   let letter = sessionAttributes.letter;
 
-  let normAnswer = isAnswerSlotValid(intent, letter);
+  let normAnswer = isAnswerSlotValid(intent, letter, "CountryAnswer");
   if (normAnswer != null) {
     if (!answerAlreadyGiven(normAnswer, correctAnswers)){
       currentScore += 1;
@@ -112,18 +117,18 @@ function getRandomLetter(category) {
   return letterArr != null ? l : null;
 }
 
-function isAnswerSlotValid(intent, letter) {
+function isAnswerSlotValid(intent, letter, slot) {
   const answerSlotFilled = intent
     && intent.slots
-    && intent.slots.Answer
-    && intent.slots.Answer.value;
+    && intent.slots[slot]
+    && intent.slots[slot].value;
 
   if (!answerSlotFilled)
-    return false;
+    return null;
 
-  let answer = intent.slots.Answer.value;
+  let answer = intent.slots[slot].value;
 
-  console.log('Validating' + answer + ', ' + answer.charAt(0) + ' for letter ' + letter);
+  console.log('Validating ' + answer + ', ' + answer.charAt(0) + ' for letter ' + letter);
   let letterArr = countries.DE_DE[letter];
   console.log('List of valid answers: ' + letterArr);
 
@@ -131,8 +136,10 @@ function isAnswerSlotValid(intent, letter) {
   let normAnswer = answer.charAt(0).toUpperCase() + answer.substring(1).toLowerCase();
 
   if (letterArr.includes(normAnswer)){
+    console.log('Normalized Answer included: ' + normAnswer + ". Answer is valid");
     return normAnswer;
   } else {
+    console.log('Normalized Answer not included: ' + normAnswer + ". Answer is invalid");
     return null;
   }
 }
@@ -177,7 +184,7 @@ const languageString = {
       WELCOME_MESSAGE: 'I will ask you %s questions, try to get as many right as you can. Just say the number of the answer. Let\'s begin. ',
       ANSWER_CORRECT_MESSAGE: 'correct. ',
       ANSWER_WRONG_MESSAGE: 'wrong. ',
-      ANSWER_ALREADY_GIVEN_MESSAGE: 'fuck you. ',
+      ANSWER_ALREADY_GIVEN_MESSAGE: 'nice try. ',
       CORRECT_ANSWER_MESSAGE: 'The correct answer is %s: %s. ',
       ANSWER_IS_MESSAGE: 'That answer is ',
       TELL_QUESTION_MESSAGE: 'Question %s. %s ',
@@ -213,7 +220,7 @@ const languageString = {
       WELCOME_MESSAGE: 'Nenne Länder mit dem Anfangsbuchstaben %s. %s beginnt.',
       ANSWER_WRONG_MESSAGE: 'Falsch. ',
       ANSWER_CORRECT_MESSAGE: 'Richtig. ',
-      ANSWER_ALREADY_GIVEN_MESSAGE: 'Fick Dich. ',
+      ANSWER_ALREADY_GIVEN_MESSAGE: 'Nice Try. ',
       CORRECT_ANSWER_MESSAGE: 'Die richtige Antwort ist %s: %s. ',
       ANSWER_IS_MESSAGE: 'Diese Antwort ist ',
       TELL_QUESTION_MESSAGE: 'Frage %s. %s ',
