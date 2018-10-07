@@ -3,7 +3,7 @@ module.exports = {
     console.log('Hello World');
 
     const dataobj = require('./csv/csvdata');
-    let data = dataobj.cars;
+    let data = dataobj.capitals;
 
     const struct = {
 

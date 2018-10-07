@@ -1,22 +1,33 @@
 /* eslint-disable  func-names */
 /* eslint-disable  no-console */
 
+//TODO: Slots chosen by Amazon (e.g Color = Fuchsie) are not always right therefore data needs to be mapped to custom slot type.
+
 const Alexa = require('ask-sdk-core');
-const countries = require('./countries');
+const data = require('./data_de');
 const i18n = require('i18next');
 const sprintf = require('i18next-sprintf-postprocessor');
 
 const ANSWER_COUNT = 4;
 const GAME_LENGTH = 5;
 const players = ["Moni", "Stephan"];
+const cats = [
+  {name: "COUNTRIES", slot: "CountryAnswer"},
+  {name: "CAPITALS", slot: "CityAnswer"},
+  {name: "ANIMALS", slot: "AnimalAnswer"},
+  {name: "COLORS", slot: "ColorAnswer"}];
 
 function startGame(newGame, handlerInput) {
   const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
-  let letter = getRandomLetter(countries);
+  let catIndex = Math.floor(Math.random()*cats.length);
+  let cat = cats[catIndex].name;
+  let letter = getRandomLetter(data[cat]);
+
+  console.log("startGame with letter " + letter + " and category " + cat);
 
   let speechOutput = newGame
     ? requestAttributes.t('NEW_GAME_MESSAGE', requestAttributes.t('GAME_NAME'))
-    + requestAttributes.t('WELCOME_MESSAGE', "\""+ letter + "\"", players[0])
+    + requestAttributes.t('WELCOME_MESSAGE', requestAttributes.t(cat), "\""+ letter + "\"", players[0])
     : '';
 
   const sessionAttributes = {};
@@ -28,7 +39,9 @@ function startGame(newGame, handlerInput) {
     letter: letter,
     player: 0,
     score: 0,
-    givenAnswers: []
+    givenAnswers: [],
+    catIndex: catIndex,
+    unplayedCats: cats.slice(catIndex,1)
   });
 
   handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
@@ -53,17 +66,23 @@ function handleUserGuess(userGaveUp, handlerInput) {
   let currentScore = parseInt(sessionAttributes.score, 10);
   let nextPlayer = parseInt(sessionAttributes.player, 10) + 1;
   let correctAnswers = sessionAttributes.givenAnswers;
+  let currentCatIndex = parseInt(sessionAttributes.catIndex);
+  let unplayedCats = sessionAttributes.unplayedCats;
 
   if (intent != null){
     console.log("Current Intent Slots are: " + JSON.stringify(intent));
   }
+  console.log("Session attributes are: " + JSON.stringify(sessionAttributes));
+
   //Reset player index if at last player
   if (nextPlayer === players.length)
     nextPlayer = 0;
 
   let letter = sessionAttributes.letter;
 
-  let normAnswer = isAnswerSlotValid(intent, letter, "CountryAnswer");
+  console.log("Cats: " + JSON.stringify(cats));
+  console.log("currentCatIndex: " + currentCatIndex);
+  let normAnswer = isAnswerSlotValid(intent, letter, cats[currentCatIndex].slot, data[cats[currentCatIndex].name]);
   if (normAnswer != null) {
     if (!answerAlreadyGiven(normAnswer, correctAnswers)){
       currentScore += 1;
@@ -89,7 +108,9 @@ function handleUserGuess(userGaveUp, handlerInput) {
     letter: letter,
     player: nextPlayer,
     score: currentScore,
-    givenAnswers: correctAnswers
+    givenAnswers: correctAnswers,
+    catIndex: currentCatIndex,
+    unplayedCats: unplayedCats
   });
 
   return responseBuilder.speak(speechOutput)
@@ -105,9 +126,9 @@ function getRandomLetter(category) {
   for (i = 0; i < 20 && letterArr == null; i++) {
     l = String.fromCharCode(
       Math.floor(Math.random() * 26) + 97
-    ).toUpperCase();
+    );
 
-    letterArr = category.DE_DE[l];
+    letterArr = category[l];
     console.log("letterArr for letter:" + l + " = " + letterArr);
   }
 
@@ -117,23 +138,27 @@ function getRandomLetter(category) {
   return letterArr != null ? l : null;
 }
 
-function isAnswerSlotValid(intent, letter, slot) {
+function isAnswerSlotValid(intent, letter, slot, cat) {
+  console.log('isAnswerSlotValid started with letter: ' + letter + ', slot:' + slot + ', cat:' + cat );
+
   const answerSlotFilled = intent
     && intent.slots
     && intent.slots[slot]
     && intent.slots[slot].value;
 
-  if (!answerSlotFilled)
+  if (!answerSlotFilled){
+    console.log('Required slot ' + slot + ' not filled');
     return null;
+  }
 
   let answer = intent.slots[slot].value;
 
   console.log('Validating ' + answer + ', ' + answer.charAt(0) + ' for letter ' + letter);
-  let letterArr = countries.DE_DE[letter];
+  let letterArr = cat[letter];
   console.log('List of valid answers: ' + letterArr);
 
   //Normalizing the answer
-  let normAnswer = answer.charAt(0).toUpperCase() + answer.substring(1).toLowerCase();
+  let normAnswer = answer.toLowerCase();
 
   if (letterArr.includes(normAnswer)){
     console.log('Normalized Answer included: ' + normAnswer + ". Answer is valid");
@@ -190,7 +215,8 @@ const languageString = {
       TELL_QUESTION_MESSAGE: 'Question %s. %s ',
       GAME_OVER_MESSAGE: 'You got %s out of %s questions correct. Thank you for playing!',
       SCORE_IS_MESSAGE: 'Your score is %s. ',
-      NEXT_PLAYER: ''
+      NEXT_PLAYER: '',
+      COUNTRIES: 'Countries', CAPITALS: 'Capitals', CARS: 'Cars', ANIMALS: 'Animals', COLORS: 'Colors'
     },
   },
   'en-US': {
@@ -217,7 +243,7 @@ const languageString = {
       HELP_UNHANDLED: 'Sage ja, um fortzufahren, oder nein, um das Spiel zu beenden.',
       START_UNHANDLED: 'Du kannst jederzeit ein neues Spiel beginnen, sage einfach „Spiel starten“.',
       NEW_GAME_MESSAGE: 'Willkommen bei %s. ',
-      WELCOME_MESSAGE: 'Nenne Länder mit dem Anfangsbuchstaben %s. %s beginnt.',
+      WELCOME_MESSAGE: 'Nenne %s mit dem Anfangsbuchstaben %s. %s beginnt.',
       ANSWER_WRONG_MESSAGE: 'Falsch. ',
       ANSWER_CORRECT_MESSAGE: 'Richtig. ',
       ANSWER_ALREADY_GIVEN_MESSAGE: 'Nice Try. ',
@@ -226,7 +252,8 @@ const languageString = {
       TELL_QUESTION_MESSAGE: 'Frage %s. %s ',
       GAME_OVER_MESSAGE: 'Du hast %s von %s richtig beantwortet. Danke fürs Mitspielen!',
       SCORE_IS_MESSAGE: 'Dein Ergebnis ist %s. ',
-      NEXT_PLAYER: 'Spieler'
+      NEXT_PLAYER: 'Spieler',
+      COUNTRIES: 'Länder', CAPITALS: 'Hauptstädte', CARS: 'Autos', ANIMALS: 'Tiere', COLORS: 'Farben'
     },
   },
 };
