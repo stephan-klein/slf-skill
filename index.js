@@ -135,6 +135,10 @@ function handleUserGuess(userGaveUp, handlerInput) {
       } else {
         console.log("Game is over");
         speechOutput += requestAttributes.t('GAME_OVER_MESSAGE') + getRankingPrompt(players, requestAttributes) + requestAttributes.t('THANK_YOU_MESSAGE');
+
+        return responseBuilder.speak(speechOutput)
+          .withSimpleCard(requestAttributes.t('GAME_NAME'), speechOutput)
+          .getResponse();
       }
     } else {
       console.log("Next Round");
@@ -160,7 +164,7 @@ function handleUserGuess(userGaveUp, handlerInput) {
 
   return responseBuilder.speak(speechOutput)
     .reprompt(repromptText)
-    .withSimpleCard(requestAttributes.t('GAME_NAME'), repromptText)
+    .withSimpleCard(requestAttributes.t('GAME_NAME'), speechOutput)
     .getResponse();
 }
 
