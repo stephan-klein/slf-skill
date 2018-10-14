@@ -10,24 +10,38 @@ const sprintf = require('i18next-sprintf-postprocessor');
 
 const ANSWER_COUNT = 4;
 const GAME_LENGTH = 5;
-const players = ["Moni", "Stephan"];
-const cats = [
+const playersInit = [
+  {name:"Moni", wrongThisRound:false, score: 0},
+  {name:"Stephan", wrongThisRound:false, score: 0}
+];
+const catsInit = [
   {name: "COUNTRIES", slot: "CountryAnswer"},
   {name: "CAPITALS", slot: "CityAnswer"},
   {name: "ANIMALS", slot: "AnimalAnswer"},
   {name: "COLORS", slot: "ColorAnswer"}];
 
 function startGame(newGame, handlerInput) {
+  console.log("startGame executed");
   const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
-  let catIndex = Math.floor(Math.random()*cats.length);
-  let cat = cats[catIndex].name;
-  let letter = getRandomLetter(data[cat]);
 
-  console.log("startGame with letter " + letter + " and category " + cat);
+  let players = shuffle(playersInit);
+  console.log("Players shuffled: " + JSON.stringify(players));
+  let cats = shuffle(catsInit);
+  console.log("Cats shuffled: " + JSON.stringify(cats));
+
+  let catIndex = 0;
+  let cat = cats[catIndex];
+
+  let playerIndex = 0;
+  let player = players[playerIndex];
+
+  let letter = getRandomLetter(data[cat.name]);
+
+  console.log("startGame with letter " + letter + " and category " + cat.name);
 
   let speechOutput = newGame
     ? requestAttributes.t('NEW_GAME_MESSAGE', requestAttributes.t('GAME_NAME'))
-    + requestAttributes.t('WELCOME_MESSAGE', requestAttributes.t(cat), "\""+ letter + "\"", players[0])
+    + requestAttributes.t('WELCOME_MESSAGE', requestAttributes.t(cat.name), "\""+ letter + "\"", player.name)
     : '';
 
   const sessionAttributes = {};
@@ -37,16 +51,16 @@ function startGame(newGame, handlerInput) {
     speechOutput: repromptText,
     repromptText,
     letter: letter,
-    player: 0,
-    score: 0,
+    players: players,
+    playerIndex: playerIndex,
     givenAnswers: [],
-    catIndex: catIndex,
-    unplayedCats: cats.slice(catIndex,1)
+    cats: cats,
+    catIndex: catIndex
   });
 
   handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
 
-  return result =  handlerInput.responseBuilder
+  return handlerInput.responseBuilder
     .speak(speechOutput)
     .reprompt(repromptText)
     .withSimpleCard(requestAttributes.t('GAME_NAME'), repromptText)
@@ -63,60 +77,115 @@ function handleUserGuess(userGaveUp, handlerInput) {
 
   let speechOutputAnalysis = '';
 
-  let currentScore = parseInt(sessionAttributes.score, 10);
-  let nextPlayer = parseInt(sessionAttributes.player, 10) + 1;
+  let players = sessionAttributes.players;
+  let playerIndex = parseInt(sessionAttributes.playerIndex, 10);
+
+  let cats = sessionAttributes.cats;
+  let catIndex = parseInt(sessionAttributes.catIndex);
+
   let correctAnswers = sessionAttributes.givenAnswers;
-  let currentCatIndex = parseInt(sessionAttributes.catIndex);
-  let unplayedCats = sessionAttributes.unplayedCats;
+
 
   if (intent != null){
     console.log("Current Intent Slots are: " + JSON.stringify(intent));
   }
   console.log("Session attributes are: " + JSON.stringify(sessionAttributes));
 
-  //Reset player index if at last player
-  if (nextPlayer === players.length)
-    nextPlayer = 0;
-
   let letter = sessionAttributes.letter;
 
   console.log("Cats: " + JSON.stringify(cats));
-  console.log("currentCatIndex: " + currentCatIndex);
-  let normAnswer = isAnswerSlotValid(intent, letter, cats[currentCatIndex].slot, data[cats[currentCatIndex].name]);
+  console.log("currentCatIndex: " + catIndex);
+  let normAnswer = isAnswerSlotValid(intent, letter, cats[catIndex].slot, data[cats[catIndex].name]);
   if (normAnswer != null) {
     if (!answerAlreadyGiven(normAnswer, correctAnswers)){
-      currentScore += 1;
+      players[playerIndex].score++;
+      players[playerIndex].wrongThisRound = false;
       speechOutputAnalysis = requestAttributes.t('ANSWER_CORRECT_MESSAGE');
     } else {
+      players[playerIndex].wrongThisRound = true;
       speechOutputAnalysis = requestAttributes.t('ANSWER_ALREADY_GIVEN_MESSAGE');
     }
   } else {
     if (!userGaveUp) {
+      players[playerIndex].wrongThisRound = true;
       speechOutputAnalysis = requestAttributes.t('ANSWER_WRONG_MESSAGE');
     }
   }
+  let speechOutput = speechOutputAnalysis;
 
-  speechOutput = speechOutputAnalysis;
-  //speechOutput += requestAttributes.t('NEXT_PLAYER');
-  speechOutput += players[nextPlayer] + ".";
+  playerIndex++;
 
-  let repromptText = players[nextPlayer] + ".";
+  if (playerIndex === players.length) {
+    //End of Round
+    playerIndex = 0;
+
+    if (roundOver(players)){
+      console.log("Round is over");
+      catIndex++;
+
+      if (catIndex < cats.length) {
+        console.log("Next category");
+        speechOutput += requestAttributes.t('ROUND_OVER_MESSAGE') + getRankingPrompt(players, requestAttributes);
+        let cat = cats[catIndex];
+        letter = getRandomLetter(data[cat.name]);
+
+        speechOutput +=
+          requestAttributes.t('NEXT_ROUND_MESSAGE') +
+          requestAttributes.t('WELCOME_MESSAGE', requestAttributes.t(cat.name), "\""+ letter + "\"", players[playerIndex].name);
+      } else {
+        console.log("Game is over");
+        speechOutput += requestAttributes.t('GAME_OVER_MESSAGE') + getRankingPrompt(players, requestAttributes) + requestAttributes.t('THANK_YOU_MESSAGE');
+      }
+    } else {
+      console.log("Next Round");
+      speechOutput += players[playerIndex].name + ".";
+    }
+  } else {
+    console.log("Next Player");
+    speechOutput += players[playerIndex].name + ".";
+  }
+
+  let repromptText = players[playerIndex].name + ".";
 
   Object.assign(sessionAttributes, {
     speechOutput: speechOutput,
     repromptText,
     letter: letter,
-    player: nextPlayer,
-    score: currentScore,
+    players: players,
+    playerIndex: playerIndex,
     givenAnswers: correctAnswers,
-    catIndex: currentCatIndex,
-    unplayedCats: unplayedCats
+    cats: cats,
+    catIndex: catIndex
   });
 
   return responseBuilder.speak(speechOutput)
     .reprompt(repromptText)
     .withSimpleCard(requestAttributes.t('GAME_NAME'), repromptText)
     .getResponse();
+}
+
+function roundOver(players){
+  console.log("roundOver started");
+
+  let allWrong = true;
+  for (let i = 0; i < players.length; i++){
+    allWrong &= players[i].wrongThisRound;
+  }
+
+  return allWrong;
+}
+
+function getRankingPrompt(players, requestAttributes){
+  let rankingPrompt = '';
+
+  let ranking = (players.concat()).sort((a,b) => (a.score < b.score) ? 1 : ((b.score < a.score) ? -1 : 0));
+  console.log("Ranking is " + JSON.stringify(ranking));
+
+  for (let i = 0; i < ranking.length; i++){
+    rankingPrompt += requestAttributes.t('RANKING_MESSAGE',ranking[i].name, ranking[i].score)
+  }
+
+  return rankingPrompt;
 }
 
 function getRandomLetter(category) {
@@ -179,6 +248,25 @@ function answerAlreadyGiven(normAnswer,givenAnswers){
   }
 }
 
+function shuffle(array) {
+  let currentIndex = array.length, temporaryValue, randomIndex;
+
+  // While there remain elements to shuffle...
+  while (0 !== currentIndex) {
+
+    // Pick a remaining element...
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex -= 1;
+
+    // And swap it with the current element.
+    temporaryValue = array[currentIndex];
+    array[currentIndex] = array[randomIndex];
+    array[randomIndex] = temporaryValue;
+  }
+
+  return array;
+}
+
 function helpTheUser(newGame, handlerInput) {
   const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
   const askMessage = newGame
@@ -209,12 +297,17 @@ const languageString = {
       WELCOME_MESSAGE: 'I will ask you %s questions, try to get as many right as you can. Just say the number of the answer. Let\'s begin. ',
       ANSWER_CORRECT_MESSAGE: 'correct. ',
       ANSWER_WRONG_MESSAGE: 'wrong. ',
+      AND: 'and ',
       ANSWER_ALREADY_GIVEN_MESSAGE: 'nice try. ',
       CORRECT_ANSWER_MESSAGE: 'The correct answer is %s: %s. ',
       ANSWER_IS_MESSAGE: 'That answer is ',
       TELL_QUESTION_MESSAGE: 'Question %s. %s ',
-      GAME_OVER_MESSAGE: 'You got %s out of %s questions correct. Thank you for playing!',
+      GAME_OVER_MESSAGE: 'Spiel vorbei. Hier das Endergebnis. ',
+      THANK_YOU_MESSAGE: 'Danke fürs Mitspielen! ',
       SCORE_IS_MESSAGE: 'Your score is %s. ',
+      ROUND_OVER_MESSAGE: 'Runde vorbei. ',
+      NEXT_ROUND_MESSAGE: 'Nächste Runde. ',
+      RANKING_MESSAGE: '%s hat %s Punkte. ',
       NEXT_PLAYER: '',
       COUNTRIES: 'Countries', CAPITALS: 'Capitals', CARS: 'Cars', ANIMALS: 'Animals', COLORS: 'Colors'
     },
@@ -246,12 +339,17 @@ const languageString = {
       WELCOME_MESSAGE: 'Nenne %s mit dem Anfangsbuchstaben %s. %s beginnt.',
       ANSWER_WRONG_MESSAGE: 'Falsch. ',
       ANSWER_CORRECT_MESSAGE: 'Richtig. ',
+      AND: ' und ',
       ANSWER_ALREADY_GIVEN_MESSAGE: 'Nice Try. ',
       CORRECT_ANSWER_MESSAGE: 'Die richtige Antwort ist %s: %s. ',
       ANSWER_IS_MESSAGE: 'Diese Antwort ist ',
       TELL_QUESTION_MESSAGE: 'Frage %s. %s ',
-      GAME_OVER_MESSAGE: 'Du hast %s von %s richtig beantwortet. Danke fürs Mitspielen!',
+      GAME_OVER_MESSAGE: 'Spiel zu Ende. Hier das Endergebnis. ',
+      THANK_YOU_MESSAGE: 'Danke fürs Mitspielen! ',
       SCORE_IS_MESSAGE: 'Dein Ergebnis ist %s. ',
+      ROUND_OVER_MESSAGE: 'Runde vorbei. ',
+      NEXT_ROUND_MESSAGE: 'Nächste Runde. ',
+      RANKING_MESSAGE: '%s hat %s Punkte. ',
       NEXT_PLAYER: 'Spieler',
       COUNTRIES: 'Länder', CAPITALS: 'Hauptstädte', CARS: 'Autos', ANIMALS: 'Tiere', COLORS: 'Farben'
     },
