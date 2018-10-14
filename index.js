@@ -10,21 +10,27 @@ const sprintf = require('i18next-sprintf-postprocessor');
 
 const ANSWER_COUNT = 4;
 const GAME_LENGTH = 5;
-const playersInit = [
-  {name:"Moni", wrongThisRound:false, score: 0},
-  {name:"Stephan", wrongThisRound:false, score: 0}
-];
+/*const playersInit = [
+  {name: "Moni", wrongThisRound: false, score: 0},
+  {name: "Stephan", wrongThisRound: false, score: 0}
+];*/
 const catsInit = [
   {name: "COUNTRIES", slot: "CountryAnswer"},
   {name: "CAPITALS", slot: "CityAnswer"},
   {name: "ANIMALS", slot: "AnimalAnswer"},
   {name: "COLORS", slot: "ColorAnswer"}];
 
-function startGame(newGame, handlerInput) {
-  console.log("startGame executed");
+function startGame(newGame, handlerInput, playerNames) {
   const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
+  console.log("startGame executed, requestEnvelope: " + JSON.stringify(handlerInput.requestEnvelope) + " playerNames=" + playerNames);
 
-  let players = shuffle(playersInit);
+  let playersInit = [];
+  for (let i = 0; i < playerNames.length; i ++){
+    playersInit.push({name: playerNames[i], wrongThisRound: false, score: 0});
+  }
+
+  //let players = shuffle(playersInit);
+  let players = playersInit;
   console.log("Players shuffled: " + JSON.stringify(players));
   let cats = shuffle(catsInit);
   console.log("Cats shuffled: " + JSON.stringify(cats));
@@ -41,7 +47,7 @@ function startGame(newGame, handlerInput) {
 
   let speechOutput = newGame
     ? requestAttributes.t('NEW_GAME_MESSAGE', requestAttributes.t('GAME_NAME'))
-    + requestAttributes.t('WELCOME_MESSAGE', requestAttributes.t(cat.name), "\""+ letter + "\"", player.name)
+    + requestAttributes.t('WELCOME_MESSAGE', requestAttributes.t(cat.name), "\"" + letter + "\"", player.name)
     : '';
 
   const sessionAttributes = {};
@@ -64,18 +70,19 @@ function startGame(newGame, handlerInput) {
     .speak(speechOutput)
     .reprompt(repromptText)
     .withSimpleCard(requestAttributes.t('GAME_NAME'), repromptText)
-     //.addElicitSlotDirective('CountryAnswer') This does not work - needed ?
+    //.addElicitSlotDirective('CountryAnswer') This does not work - needed ?
     .getResponse();
 }
 
 function handleUserGuess(userGaveUp, handlerInput) {
-  console.log("handleUserGuess started");
+  console.log("handleUserGuess started, userGaveUp=" + userGaveUp);
   const {requestEnvelope, attributesManager, responseBuilder} = handlerInput;
   const {intent} = requestEnvelope.request;
   const sessionAttributes = attributesManager.getSessionAttributes();
   const requestAttributes = attributesManager.getRequestAttributes();
 
   let speechOutputAnalysis = '';
+
 
   let players = sessionAttributes.players;
   let playerIndex = parseInt(sessionAttributes.playerIndex, 10);
@@ -84,20 +91,17 @@ function handleUserGuess(userGaveUp, handlerInput) {
   let catIndex = parseInt(sessionAttributes.catIndex);
 
   let correctAnswers = sessionAttributes.givenAnswers;
-
-
-  if (intent != null){
-    console.log("Current Intent Slots are: " + JSON.stringify(intent));
-  }
-  console.log("Session attributes are: " + JSON.stringify(sessionAttributes));
-
   let letter = sessionAttributes.letter;
 
-  console.log("Cats: " + JSON.stringify(cats));
-  console.log("currentCatIndex: " + catIndex);
+  if (intent != null) {
+    console.log("Intent is: " + JSON.stringify(intent));
+  }
+
+
+  console.log("Session attributes are: " + JSON.stringify(sessionAttributes));
   let normAnswer = isAnswerSlotValid(intent, letter, cats[catIndex].slot, data[cats[catIndex].name]);
-  if (normAnswer != null) {
-    if (!answerAlreadyGiven(normAnswer, correctAnswers)){
+  if (normAnswer != null && !userGaveUp) {
+    if (!answerAlreadyGiven(normAnswer, correctAnswers)) {
       players[playerIndex].score++;
       players[playerIndex].wrongThisRound = false;
       speechOutputAnalysis = requestAttributes.t('ANSWER_CORRECT_MESSAGE');
@@ -106,20 +110,20 @@ function handleUserGuess(userGaveUp, handlerInput) {
       speechOutputAnalysis = requestAttributes.t('ANSWER_ALREADY_GIVEN_MESSAGE');
     }
   } else {
+    players[playerIndex].wrongThisRound = true;
     if (!userGaveUp) {
-      players[playerIndex].wrongThisRound = true;
       speechOutputAnalysis = requestAttributes.t('ANSWER_WRONG_MESSAGE');
     }
   }
-  let speechOutput = speechOutputAnalysis;
 
+  let speechOutput = speechOutputAnalysis;
   playerIndex++;
 
   if (playerIndex === players.length) {
     //End of Round
     playerIndex = 0;
 
-    if (roundOver(players)){
+    if (roundOver(players)) {
       console.log("Round is over");
       catIndex++;
 
@@ -131,7 +135,7 @@ function handleUserGuess(userGaveUp, handlerInput) {
 
         speechOutput +=
           requestAttributes.t('NEXT_ROUND_MESSAGE') +
-          requestAttributes.t('WELCOME_MESSAGE', requestAttributes.t(cat.name), "\""+ letter + "\"", players[playerIndex].name);
+          requestAttributes.t('WELCOME_MESSAGE', requestAttributes.t(cat.name), "\"" + letter + "\"", players[playerIndex].name);
       } else {
         console.log("Game is over");
         speechOutput += requestAttributes.t('GAME_OVER_MESSAGE') + getRankingPrompt(players, requestAttributes) + requestAttributes.t('THANK_YOU_MESSAGE');
@@ -168,25 +172,25 @@ function handleUserGuess(userGaveUp, handlerInput) {
     .getResponse();
 }
 
-function roundOver(players){
+function roundOver(players) {
   console.log("roundOver started");
 
   let allWrong = true;
-  for (let i = 0; i < players.length; i++){
+  for (let i = 0; i < players.length; i++) {
     allWrong &= players[i].wrongThisRound;
   }
 
   return allWrong;
 }
 
-function getRankingPrompt(players, requestAttributes){
+function getRankingPrompt(players, requestAttributes) {
   let rankingPrompt = '';
 
-  let ranking = (players.concat()).sort((a,b) => (a.score < b.score) ? 1 : ((b.score < a.score) ? -1 : 0));
+  let ranking = (players.concat()).sort((a, b) => (a.score < b.score) ? 1 : ((b.score < a.score) ? -1 : 0));
   console.log("Ranking is " + JSON.stringify(ranking));
 
-  for (let i = 0; i < ranking.length; i++){
-    rankingPrompt += requestAttributes.t('RANKING_MESSAGE',ranking[i].name, ranking[i].score)
+  for (let i = 0; i < ranking.length; i++) {
+    rankingPrompt += requestAttributes.t('RANKING_MESSAGE', ranking[i].name, ranking[i].score)
   }
 
   return rankingPrompt;
@@ -212,14 +216,14 @@ function getRandomLetter(category) {
 }
 
 function isAnswerSlotValid(intent, letter, slot, cat) {
-  console.log('isAnswerSlotValid started with letter: ' + letter + ', slot:' + slot + ', cat:' + cat );
+  console.log('isAnswerSlotValid started with letter: ' + letter + ', slot:' + slot + ', cat:' + cat);
 
   const answerSlotFilled = intent
     && intent.slots
     && intent.slots[slot]
     && intent.slots[slot].value;
 
-  if (!answerSlotFilled){
+  if (!answerSlotFilled) {
     console.log('Required slot ' + slot + ' not filled');
     return null;
   }
@@ -233,7 +237,7 @@ function isAnswerSlotValid(intent, letter, slot, cat) {
   //Normalizing the answer
   let normAnswer = answer.toLowerCase();
 
-  if (letterArr.includes(normAnswer)){
+  if (letterArr.includes(normAnswer)) {
     console.log('Normalized Answer included: ' + normAnswer + ". Answer is valid");
     return normAnswer;
   } else {
@@ -242,8 +246,8 @@ function isAnswerSlotValid(intent, letter, slot, cat) {
   }
 }
 
-function answerAlreadyGiven(normAnswer,givenAnswers){
-  if (givenAnswers.includes(normAnswer)){
+function answerAlreadyGiven(normAnswer, givenAnswers) {
+  if (givenAnswers.includes(normAnswer)) {
     console.log('Answer already given');
     return true;
   } else {
@@ -328,7 +332,7 @@ const languageString = {
   },
   de: {
     translation: {
-      GAME_NAME: 'Moni versus Stephan',
+      GAME_NAME: 'Stadt Land Fluss',
       HELP_MESSAGE: 'Ich stelle dir %s Multiple-Choice-Fragen. Antworte mit der Zahl, die zur richtigen Antwort gehört. Sage beispielsweise eins, zwei, drei oder vier. Du kannst jederzeit ein neues Spiel beginnen, sage einfach „Spiel starten“. ',
       REPEAT_QUESTION_MESSAGE: 'Wenn die letzte Frage wiederholt werden soll, sage „Wiederholen“ ',
       ASK_MESSAGE_START: 'Möchten Sie beginnen?',
@@ -386,10 +390,31 @@ const LaunchRequest = {
         && request.intent.name === 'AMAZON.StartOverIntent');
   },
   handle(handlerInput) {
-    return startGame(true, handlerInput);
+    return startGame(true, handlerInput, ["Spieler 1", "Spieler 2"]);
   },
 };
 
+const SetPlayerCountIntent = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && (handlerInput.requestEnvelope.request.intent.name === 'SetPlayerCountIntent')
+      && (handlerInput.requestEnvelope.request.intent.slots.number.value < 7);
+  },
+  handle(handlerInput) {
+    return startGame(true, handlerInput, ["Spieler 1", "Spieler 2", "Spieler 3", "Spieler 4", "Spieler 5", "Spieler 6"].slice(0,handlerInput.requestEnvelope.request.intent.slots.number.value));
+  },
+};
+
+const SetPlayersIntent = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && (handlerInput.requestEnvelope.request.intent.name === 'SetPlayersIntent');
+  },
+  handle(handlerInput) {
+    let players = handlerInput.requestEnvelope.request.intent.slots.name.value;
+    return startGame(true, handlerInput, players.split(" "));
+  },
+};
 
 const HelpIntent = {
   canHandle(handlerInput) {
@@ -544,6 +569,8 @@ const skillBuilder = Alexa.SkillBuilders.custom();
 exports.handler = skillBuilder
   .addRequestHandlers(
     LaunchRequest,
+    SetPlayerCountIntent,
+    SetPlayersIntent,
     HelpIntent,
     AnswerIntent,
     RepeatIntent,
