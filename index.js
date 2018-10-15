@@ -205,7 +205,10 @@ function getRandomLetter(category) {
       Math.floor(Math.random() * 26) + 97
     );
 
-    letterArr = category[l];
+    if (category[l] !== undefined)
+      if (category[l].length > 5)
+        letterArr = category[l];
+
     console.log("letterArr for letter:" + l + " = " + letterArr);
   }
 
@@ -342,8 +345,8 @@ const languageString = {
   de: {
     translation: {
       GAME_NAME: 'Stadt Land Fluss',
-      HELP_MESSAGE: 'Ich stelle dir %s Multiple-Choice-Fragen. Antworte mit der Zahl, die zur richtigen Antwort gehört. Sage beispielsweise eins, zwei, drei oder vier. Du kannst jederzeit ein neues Spiel beginnen, sage einfach „Spiel starten“. ',
-      REPEAT_QUESTION_MESSAGE: 'Wenn die letzte Frage wiederholt werden soll, sage „Wiederholen“ ',
+      HELP_MESSAGE: 'Der Spieler an der Reihe muss einen Begriff mit dem richtigen Anfangsbuchstaben in der jeweiligen Kategorie nennen. Um die Namen oder Anzahl der Spieler zu bestimmen, starte das Spiel beispielsweise mit „Starte Stadt Land Fluss mit Monika und Stephan“ oder „Starte Stadt Land Fluss mit Fünf Spielern“. ',
+      REPEAT_QUESTION_MESSAGE: 'Wenn dir nichts einfällt sage „Passe“ oder „Keine Ahnung“. ',
       ASK_MESSAGE_START: 'Möchten Sie beginnen?',
       HELP_REPROMPT: 'Wenn du eine Frage beantworten willst, antworte mit der Zahl, die zur richtigen Antwort gehört. ',
       STOP_MESSAGE: 'Möchtest du weiterspielen?',
