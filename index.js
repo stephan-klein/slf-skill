@@ -25,7 +25,7 @@ function startGame(newGame, handlerInput, playerNames) {
   console.log("startGame executed, requestEnvelope: " + JSON.stringify(handlerInput.requestEnvelope) + " playerNames=" + playerNames);
 
   let playersInit = [];
-  for (let i = 0; i < playerNames.length; i ++){
+  for (let i = 0; i < playerNames.length; i++) {
     playersInit.push({name: playerNames[i], wrongThisRound: false, score: 0});
   }
 
@@ -218,17 +218,26 @@ function getRandomLetter(category) {
 function isAnswerSlotValid(intent, letter, slot, cat) {
   console.log('isAnswerSlotValid started with letter: ' + letter + ', slot:' + slot + ', cat:' + cat);
 
-  const answerSlotFilled = intent
-    && intent.slots
-    && intent.slots[slot]
-    && intent.slots[slot].value;
+  let answerSlotFilled = intent
+    && intent.slots;
+
+  let value = null;
+  if (answerSlotFilled) {
+    Object.keys(intent.slots).forEach(function (slot) {
+      console.log('Slot ' + intent.slots[slot].name + ' has value ' + intent.slots[slot].value);
+      if (intent.slots[slot].value !== undefined) {
+        value = intent.slots[slot].value;
+      }
+    });
+  }
+  answerSlotFilled = answerSlotFilled && value;
 
   if (!answerSlotFilled) {
-    console.log('Required slot ' + slot + ' not filled');
+    console.log('No slot filled');
     return null;
   }
 
-  let answer = intent.slots[slot].value;
+  let answer = value;
 
   console.log('Validating ' + answer + ', ' + answer.charAt(0) + ' for letter ' + letter);
   let letterArr = cat[letter];
@@ -401,7 +410,7 @@ const SetPlayerCountIntent = {
       && (handlerInput.requestEnvelope.request.intent.slots.number.value < 7);
   },
   handle(handlerInput) {
-    return startGame(true, handlerInput, ["Spieler 1", "Spieler 2", "Spieler 3", "Spieler 4", "Spieler 5", "Spieler 6"].slice(0,handlerInput.requestEnvelope.request.intent.slots.number.value));
+    return startGame(true, handlerInput, ["Spieler 1", "Spieler 2", "Spieler 3", "Spieler 4", "Spieler 5", "Spieler 6"].slice(0, handlerInput.requestEnvelope.request.intent.slots.number.value));
   },
 };
 
