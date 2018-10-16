@@ -16,7 +16,7 @@ const GAME_LENGTH = 5;
 ];*/
 const catsInit = [
   {name: "COUNTRIES", slot: "CountryAnswer"},
-  {name: "CAPITALS", slot: "CityAnswer"},
+  {name: "CITIES", slot: "CityAnswer"},
   {name: "ANIMALS", slot: "AnimalAnswer"},
   {name: "COLORS", slot: "ColorAnswer"}];
 
@@ -40,6 +40,9 @@ function startGame(newGame, handlerInput, playerNames) {
 
   let playerIndex = 0;
   let player = players[playerIndex];
+
+  console.log("Cat: " + cat.name);
+  console.log("Data: " + JSON.stringify(data));
 
   let letter = getRandomLetter(data[cat.name]);
 
@@ -190,13 +193,14 @@ function getRankingPrompt(players, requestAttributes) {
   console.log("Ranking is " + JSON.stringify(ranking));
 
   for (let i = 0; i < ranking.length; i++) {
-    rankingPrompt += requestAttributes.t('RANKING_MESSAGE', ranking[i].name, ranking[i].score)
+    rankingPrompt += requestAttributes.t(ranking[i].score > 1 ? 'RANKING_MESSAGE' : 'RANKING_MESSAGE_SINGULAR', ranking[i].name, ranking[i].score)
   }
 
   return rankingPrompt;
 }
 
 function getRandomLetter(category) {
+  console.log("getRandomLetter");
   let letterArr = null;
   let i, l;
 
@@ -205,10 +209,14 @@ function getRandomLetter(category) {
       Math.floor(Math.random() * 26) + 97
     );
 
-    if (category[l] !== undefined)
-      if (category[l].length > 5)
+    console.log("a");
+    if (category[l] !== undefined) {
+      console.log("b");
+      if (category[l].length > 5) {
+        console.log("c");
         letterArr = category[l];
-
+      }
+    }
     console.log("letterArr for letter:" + l + " = " + letterArr);
   }
 
@@ -293,9 +301,8 @@ function helpTheUser(newGame, handlerInput) {
     ? requestAttributes.t('ASK_MESSAGE_START')
     : requestAttributes.t('REPEAT_QUESTION_MESSAGE') + requestAttributes.t('STOP_MESSAGE');
   const speechOutput = requestAttributes.t('HELP_MESSAGE', GAME_LENGTH) + askMessage;
-  const repromptText = requestAttributes.t('HELP_REPROMPT') + askMessage;
 
-  return handlerInput.responseBuilder.speak(speechOutput).reprompt(repromptText).getResponse();
+  return handlerInput.responseBuilder.speak(speechOutput).getResponse();
 }
 
 /* jshint -W101 */
@@ -328,8 +335,9 @@ const languageString = {
       ROUND_OVER_MESSAGE: 'Runde vorbei. ',
       NEXT_ROUND_MESSAGE: 'Nächste Runde. ',
       RANKING_MESSAGE: '%s hat %s Punkte. ',
+      RANKING_MESSAGE_SINGULAR: '%s hat einen Punkt. ',
       NEXT_PLAYER: '',
-      COUNTRIES: 'Countries', CAPITALS: 'Capitals', CARS: 'Cars', ANIMALS: 'Animals', COLORS: 'Colors'
+      COUNTRIES: 'Countries', CAPITALS: 'Capitals', CARS: 'Cars', ANIMALS: 'Animals', COLORS: 'Colors', CITIES: 'Cities'
     },
   },
   'en-US': {
@@ -344,17 +352,16 @@ const languageString = {
   },
   de: {
     translation: {
-      GAME_NAME: 'Stadt Land Fluss',
+      GAME_NAME: 'Stadt Land Plus',
       HELP_MESSAGE: 'Der Spieler an der Reihe muss einen Begriff mit dem richtigen Anfangsbuchstaben in der jeweiligen Kategorie nennen. Um die Namen oder Anzahl der Spieler zu bestimmen, starte das Spiel beispielsweise mit „Starte Stadt Land Fluss mit Monika und Stephan“ oder „Starte Stadt Land Fluss mit Fünf Spielern“. ',
       REPEAT_QUESTION_MESSAGE: 'Wenn dir nichts einfällt sage „Passe“ oder „Keine Ahnung“. ',
       ASK_MESSAGE_START: 'Möchten Sie beginnen?',
-      HELP_REPROMPT: 'Wenn du eine Frage beantworten willst, antworte mit der Zahl, die zur richtigen Antwort gehört. ',
       STOP_MESSAGE: 'Möchtest du weiterspielen?',
       CANCEL_MESSAGE: 'OK, dann lass uns bald mal wieder spielen.',
       NO_MESSAGE: 'OK, spielen wir ein andermal. Auf Wiedersehen!',
-      TRIVIA_UNHANDLED: 'Sagt eine Zahl beispielsweise zwischen 1 und %s',
+      TRIVIA_UNHANDLED: 'Das verstehe ich nicht.',
       HELP_UNHANDLED: 'Sage ja, um fortzufahren, oder nein, um das Spiel zu beenden.',
-      START_UNHANDLED: 'Du kannst jederzeit ein neues Spiel beginnen, sage einfach „Spiel starten“.',
+      START_UNHANDLED: 'Du kannst jederzeit ein neues Spiel beginnen, sage einfach „Starte Stadt Land Plus“.',
       NEW_GAME_MESSAGE: 'Willkommen bei %s. ',
       WELCOME_MESSAGE: 'Nenne %s mit dem Anfangsbuchstaben %s. %s beginnt.',
       ANSWER_WRONG_MESSAGE: 'Falsch. ',
@@ -370,8 +377,9 @@ const languageString = {
       ROUND_OVER_MESSAGE: 'Runde vorbei. ',
       NEXT_ROUND_MESSAGE: 'Nächste Runde. ',
       RANKING_MESSAGE: '%s hat %s Punkte. ',
+      RANKING_MESSAGE_SINGULAR: '%s hat einen Punkt. ',
       NEXT_PLAYER: 'Spieler',
-      COUNTRIES: 'Länder', CAPITALS: 'Hauptstädte', CARS: 'Autos', ANIMALS: 'Tiere', COLORS: 'Farben'
+      COUNTRIES: 'Länder', CAPITALS: 'Hauptstädte', CARS: 'Autos', ANIMALS: 'Tiere', COLORS: 'Farben', CITIES: 'Städte'
     },
   },
 };
