@@ -3,7 +3,7 @@ module.exports = {
     console.log('Hello World');
 
     const dataobj = require('./csv/csvdata');
-    let data = dataobj.capitals;
+    let data = dataobj.cities;
 
     const struct = {
 
@@ -11,8 +11,8 @@ module.exports = {
 
     for (let i = 0; i < data.length; i++){
       let color = data[i];
-      color = color.charAt(0).toUpperCase() + color.substring(1).toLowerCase();
-      let letter = color.charAt(0).toUpperCase();
+      color = color.toLowerCase();
+      let letter = color.charAt(0).toLowerCase();
 
       if (struct[letter] === undefined){
         struct[letter] = [color];
